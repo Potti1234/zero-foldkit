@@ -1,0 +1,23 @@
+# https://docs.devin.ai/onboard-devin/environment-yaml
+# pnpm workspace for packages/{zero-foldkit,zero-effect} + apps/zbugs.
+initialize: |
+  # postgres 16 for zero-cache upstream (needs PG15+ for column-list PUBLICATIONs)
+  sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+  curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/postgresql.gpg
+  sudo apt-get update && sudo apt-get install -y postgresql-16
+  /usr/lib/postgresql/16/bin/initdb -D "$HOME/pgdata16/data" -U postgres
+maintenance: |
+  pnpm install
+knowledge:
+  - name: typecheck
+    contents: |
+      pnpm -r typecheck   # zero-foldkit, zero-effect, zbugs
+  - name: startup
+    contents: |
+      # 1. postgres: /usr/lib/postgresql/16/bin/pg_ctl -D "$HOME/pgdata16/data" -o "-p 6434 -k /tmp -c wal_level=logical -c max_wal_senders=10 -c max_replication_slots=10 -c hot_standby=on -c listen_addresses=127.0.0.1" start
+      # 2. first time: psql -h 127.0.0.1 -p 6434 -U postgres -c "ALTER USER postgres PASSWORD 'password'; CREATE DATABASE zbugs;" then: cd apps/zbugs && ZERO_UPSTREAM_DB=postgresql://postgres:password@127.0.0.1:6434/zbugs pnpm db:migrate && pnpm db:seed
+      # 3. zero-cache: cd apps/zbugs && pnpm zero-cache  (:4848, reads .env)
+      # 4. app+API: cd apps/zbugs && pnpm dev  (:5173)
+  - name: notes
+    contents: |
+      apps/zbugs/.env holds dev-only ES256 keys; mint a crew JWT with PRIVATE_JWK (sub/name/role/iat/exp) and set `jwt` cookie to log in. Effect tx paths need an ambient Scope — use Effect.scoped / Layer.buildWithScope (see packages/zero-effect/src/effect-sql.ts).
