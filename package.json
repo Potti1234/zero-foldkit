@@ -1,0 +1,16 @@
+{
+  "name": "zero-foldkit",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "pnpm -r typecheck",
+    "dev:zbugs": "pnpm --filter zbugs dev",
+    "zero-cache": "pnpm --filter zbugs zero-cache-dev",
+    "api": "pnpm --filter zbugs api",
+    "db-up": "pnpm --filter zbugs db-up"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3"
+  },
+  "packageManager": "pnpm@11.17.0"
+}

@@ -1,0 +1,40 @@
+{
+  "name": "zbugs",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "zero-cache": "zero-cache-dev",
+    "db:up": "docker compose -f docker/docker-compose.yml up -d",
+    "db:migrate": "drizzle-kit migrate",
+    "db:seed": "node scripts/seed.ts"
+  },
+  "dependencies": {
+    "@dotenvx/dotenvx": "^1.39.0",
+    "@effect/platform-node": "4.0.0-rc.116",
+    "@effect/sql-pg": "4.0.0-rc.116",
+    "@rocicorp/zero": "1.9.0",
+    "compare-utf8": "^0.2.3",
+    "drizzle-orm": "^0.45.2",
+    "effect": "4.0.0-rc.116",
+    "foldkit": "0.163.0",
+    "jose": "^5.9.3",
+    "nanoid": "^5.1.2",
+    "postgres": "3.4.7",
+    "zero-effect": "workspace:*",
+    "zero-foldkit": "workspace:*",
+    "zod": "^4.1.11"
+  },
+  "devDependencies": {
+    "@foldkit/vite-plugin": "0.24.0",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^22.10.5",
+    "drizzle-kit": "^0.31.10",
+    "tailwindcss": "^4.3.3",
+    "typescript": "~5.9.3",
+    "vite": "^8.0.0"
+  }
+}
