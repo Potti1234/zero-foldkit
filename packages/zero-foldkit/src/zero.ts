@@ -368,21 +368,24 @@ export const makeZeroClient =
                 : Stream.unwrap(
                     Effect.gen(function* () {
                       const zero = yield* getZero
-                      return Stream.callback<Message>(queue =>
-                        Effect.gen(function* () {
-                          yield* Effect.acquireRelease(
-                            Effect.sync(() =>
-                              zero.connection.state.subscribe(state =>
-                                Queue.offerUnsafe(
-                                  queue,
-                                  config.toMessage(state),
+                      return Stream.concat(
+                        Stream.make(config.toMessage(zero.connection.state.current)),
+                        Stream.callback<Message>(queue =>
+                          Effect.gen(function* () {
+                            yield* Effect.acquireRelease(
+                              Effect.sync(() =>
+                                zero.connection.state.subscribe(state =>
+                                  Queue.offerUnsafe(
+                                    queue,
+                                    config.toMessage(state),
+                                  ),
                                 ),
                               ),
-                            ),
-                            unsubscribe => Effect.sync(unsubscribe),
-                          )
-                          return yield* Effect.never
-                        }),
+                              unsubscribe => Effect.sync(unsubscribe),
+                            )
+                            return yield* Effect.never
+                          }),
+                        ),
                       )
                     }),
                   ),

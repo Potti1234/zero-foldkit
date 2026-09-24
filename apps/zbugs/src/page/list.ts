@@ -2,7 +2,7 @@ import { Command, Submodel, Subscription, type Update } from 'foldkit'
 import { defineMessageUnion } from 'foldkit/message'
 import type { Html, HtmlBuilder } from 'foldkit/html'
 import { modifyFields } from 'foldkit/struct'
-import { Effect, Option, Schema } from 'effect'
+import { Duration, Effect, Option, Schema } from 'effect'
 import { nanoid } from 'nanoid'
 import { mutators } from '../../shared/mutators.ts'
 import { queries, type Issue } from '../../shared/queries.ts'
@@ -32,6 +32,8 @@ export const Model = Schema.Struct({
   maybeProjects: Schema.Option(Schema.Array(Schema.Any)),
   resultType: Schema.String,
   textFilter: Schema.String,
+  debouncedTextFilter: Schema.String,
+  filterSeq: Schema.Number,
   open: OpenFilter,
   sortField: SortField,
   sortDirection: SortDirection,
@@ -53,6 +55,10 @@ export const Message = defineMessageUnion({
     details: Schema.Any,
   },
   ChangedTextFilter: { value: Schema.String },
+  CompletedDebounceTextFilter: {
+    seq: Schema.Number,
+    value: Schema.String,
+  },
   ClickedOpenFilter: {},
   ChangedSortField: { field: Schema.String },
   ClickedSortDirection: {},
@@ -79,6 +85,8 @@ export const init = (
     maybeProjects: Option.none(),
     resultType: 'unknown',
     textFilter: '',
+    debouncedTextFilter: '',
+    filterSeq: 0,
     open: 'All',
     sortField: 'modified',
     sortDirection: 'desc',
@@ -142,6 +150,18 @@ export const subscriptions = Subscription.make<Model, Message, ZeroService>()(
 
 // COMMANDS
 
+export const DebounceTextFilter = Command.define('DebounceTextFilter', {
+  args: {
+    seq: Schema.Number,
+    value: Schema.String,
+  },
+  messages: [Message.CompletedDebounceTextFilter],
+  execute: ({ seq, value }) =>
+    Effect.sleep(Duration.millis(300)).pipe(
+      Effect.map(() => Message.CompletedDebounceTextFilter({ seq, value })),
+    ),
+})
+
 export const CreateIssue = Command.define('CreateIssue', {
   args: {
     title: Schema.String,
@@ -193,10 +213,24 @@ export const update = (model: Model, message: Message) =>
       }),
     }),
 
-    ChangedTextFilter: ({ value }) => ({
-      model: modifyFields(model, {
-        textFilter: () => value,
-      }),
+    ChangedTextFilter: ({ value }) => {
+      const nextSeq = model.filterSeq + 1
+      return {
+        model: modifyFields(model, {
+          textFilter: () => value,
+          filterSeq: () => nextSeq,
+        }),
+        commands: [DebounceTextFilter({ seq: nextSeq, value })],
+      }
+    },
+
+    CompletedDebounceTextFilter: ({ seq, value }) => ({
+      model:
+        seq === model.filterSeq
+          ? modifyFields(model, {
+              debouncedTextFilter: () => value,
+            })
+          : model,
     }),
 
     ClickedOpenFilter: () => ({
@@ -309,7 +343,7 @@ export const view = Submodel.defineView<Model, Message>(
       [
         h.input([
           h.Class(`${inputClass} w-64`),
-          h.Value(model.textFilter),
+          h.Attribute('value', model.textFilter),
           h.Placeholder('Filter issues...'),
           h.OnInput(value => Message.ChangedTextFilter({ value })),
         ]),
@@ -360,13 +394,13 @@ export const view = Submodel.defineView<Model, Message>(
           [
             h.input([
               h.Class(`${inputClass} block w-full mb-2 bg-gray-800`),
-              h.Value(model.composerTitle),
+              h.Attribute('value', model.composerTitle),
               h.Placeholder('Issue title'),
               h.OnInput(value => Message.ChangedComposerTitle({ value })),
             ]),
             h.textarea([
               h.Class(`${inputClass} block w-full mb-2 bg-gray-800`),
-              h.Value(model.composerDescription),
+              h.Attribute('value', model.composerDescription),
               h.Placeholder('Description (markdown)'),
               h.OnInput(value =>
                 Message.ChangedComposerDescription({ value }),

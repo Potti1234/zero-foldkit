@@ -353,11 +353,6 @@ export const view = (
   model: Model,
   h: import('foldkit/html').HtmlBuilder<Message>,
 ): Document => {
-  const loginLink =
-    '/api/login/github?redirect=' +
-    encodeURIComponent(
-      typeof window === 'undefined' ? '/' : window.location.pathname,
-    )
 
   const nav = h.div(
     [
@@ -404,12 +399,12 @@ export const view = (
             ),
           ]
         : [
-            h.a(
+            h.button(
               [
                 h.Class(
                   'px-3 py-1.5 rounded bg-blue-600 text-white text-sm hover:bg-blue-500',
                 ),
-                h.Href(loginLink),
+                h.OnClick(Message.ClickedLogin()),
               ],
               ['Log in with GitHub'],
             ),
